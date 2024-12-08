@@ -12,10 +12,10 @@ player_1_score: db 0      ; Score for Player 1
 player_2_score: db 0      ; Score for Player 2
 footer_text: db '23F-0605, 23F-0707, 23F-0849', 0
 footer_length: dw 28
-winner_message_1: db 'Player 1 Wins!            ', 0
-winner_length_1: dw 20
-winner_message_2: db 'Player 2 Wins!            ', 0
-winner_length_2: dw 20
+winner_message_1: db 'Player 1 Wins!', 0
+winner_length_1: dw 14
+winner_message_2: db 'Player 2 Wins!', 0
+winner_length_2: dw 14
 
 initialize:
 pusha
@@ -215,14 +215,14 @@ draw_scores:
     mov di, 0               ; Top-left corner
     mov al, [player_1_score]
     add al, '0'             ; Convert numeric value to ASCII
-    mov ah, 0x07            ; Attribute byte (white text)
+    mov ah, 0x17            ; Attribute byte (white text)
     stosw                   ; Write the score to video memory
 
     ; Draw Player 2 (right) score
     mov di, 158             ; Top-right corner (80 * 2 - 2 = 158)
     mov al, [player_2_score]
     add al, '0'             ; Convert numeric value to ASCII
-    mov ah, 0x07            ; Attribute byte (white text)
+    mov ah, 0x20            ; Attribute byte (white text)
     stosw                   ; Write the score to video memory
 
     pop es
@@ -244,7 +244,7 @@ mov dl, [paddle_1_pos]
 sub dl, 1
 cmp dl, 1
 je return
-sub byte[paddle_1_pos],1
+sub byte[paddle_1_pos],1q
 jmp return
 mov_paddle_1_down:
 mov dl, [paddle_1_pos]
@@ -440,7 +440,7 @@ display_winner_message_1:
     push es
     mov ax, 0xB800                 ; Set ES to video memory segment
     mov es, ax
-    mov di, 160 * 12               ; Center row of the screen
+    mov di, 1960
     mov si, winner_message_1
     mov cx, [winner_length_1]
 print_message_1:
@@ -457,7 +457,7 @@ display_winner_message_2:
     push es
     mov ax, 0xB800                 ; Set ES to video memory segment
     mov es, ax
-    mov di, 160 * 12               ; Center row of the screen
+    mov di, 1960
     mov si, winner_message_2
     mov cx, [winner_length_2]
 print_message_2:
