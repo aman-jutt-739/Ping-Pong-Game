@@ -12,10 +12,121 @@ player_1_score: db 0      ; Score for Player 1
 player_2_score: db 0      ; Score for Player 2
 footer_text: db '23F-0605, 23F-0707, 23F-0849', 0
 footer_length: dw 28
-winner_message_1: db 'Player 1 Wins!            ', 0
-winner_length_1: dw 20
-winner_message_2: db 'Player 2 Wins!            ', 0
-winner_length_2: dw 20
+winner_message_1: db 'Player 1 Wins!', 0
+winner_length_1: dw 14
+winner_message_2: db 'Player 2 Wins!', 0
+winner_length_2: dw 14
+
+print_square:
+push bp
+mov bp, sp
+push ax
+push bx
+push cx
+mov ax, 0x072A
+mov cx, [bp + 4]
+outer:
+mov bx, 0
+cmp cx, 0
+jz exit
+mov dx, [bp + 4]
+inner:
+cmp dx, 0
+jz decrement
+cmp cx, [bp + 4]
+jz print_sterik
+cmp cx, 1
+jz print_sterik
+cmp dx, [bp + 4]
+jz print_sterik
+cmp dx, 1
+jz print_sterik
+print_spaces:
+mov word[es:di], 0x0720
+add di, 4
+add bx, 4
+dec dx
+jmp inner
+print_sterik:
+mov [es:di], ax
+add bx, 4
+add di, 4
+dec dx
+jmp inner
+decrement:
+add di, 160
+sub di, bx
+sub cx, 1
+jmp outer
+exit:
+pop cx
+pop bx
+pop ax
+pop bp
+ret 2
+
+print_smile:
+push di
+mov di, 1496
+mov word[es:di], 0x072A
+mov di, 1656
+mov word[es:di], 0x072A
+mov di, 1816
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+add di, 4
+mov word[es:di], 0x072A
+sub di, 160
+mov word[es:di], 0x072A
+sub di, 160
+mov word[es:di], 0x072A
+pop di
+ret
+
+print_smiley:
+push ax
+push bx
+push cx
+push dx
+push di
+push es
+mov ax, 0xb800
+mov es, ax
+mov di, 206
+mov ax, 15
+push ax
+call print_square
+mov ax, 3
+push ax
+mov di, 534
+call print_square
+mov ax, 3
+push ax
+mov di, 568
+call print_square
+call print_smile
+pop es
+pop di
+pop dx
+pop cx
+pop bx
+pop ax
+ret
 
 initialize:
 pusha
@@ -40,6 +151,7 @@ ret
 
 draw:
     call delay
+    call print_smiley
     call clrscr
     call draw_scores          ; Draw the scores at the top corners
     call print_ball
@@ -220,14 +332,14 @@ draw_scores:
     mov di, 0               ; Top-left corner
     mov al, [player_1_score]
     add al, '0'             ; Convert numeric value to ASCII
-    mov ah, 0x07            ; Attribute byte (white text)
+    mov ah, 0x17            ; Attribute byte (white text)
     stosw                   ; Write the score to video memory
 
     ; Draw Player 2 (right) score
     mov di, 158             ; Top-right corner (80 * 2 - 2 = 158)
     mov al, [player_2_score]
     add al, '0'             ; Convert numeric value to ASCII
-    mov ah, 0x07            ; Attribute byte (white text)
+    mov ah, 0x20            ; Attribute byte (white text)
     stosw                   ; Write the score to video memory
 
     pop es
@@ -463,12 +575,12 @@ display_winner_message_1:
     push es
     mov ax, 0xB800                 ; Set ES to video memory segment
     mov es, ax
-    mov di, 160 * 12               ; Center row of the screen
+    mov di, 1960
     mov si, winner_message_1
     mov cx, [winner_length_1]
 print_message_1:
     lodsb                          ; Load a byte from DS:SI
-    mov ah, 0x07                   ; Attribute byte (white text)
+    mov ah, 0x47                   ; Attribute byte (white text)
     stosw                          ; Write character to video memory
     loop print_message_1
     pop es
@@ -480,12 +592,12 @@ display_winner_message_2:
     push es
     mov ax, 0xB800                 ; Set ES to video memory segment
     mov es, ax
-    mov di, 160 * 12               ; Center row of the screen
+    mov di, 1960
     mov si, winner_message_2
     mov cx, [winner_length_2]
 print_message_2:
     lodsb                          ; Load a byte from DS:SI
-    mov ah, 0x07                   ; Attribute byte (white text)
+    mov ah, 0x47                   ; Attribute byte (white text)
     stosw                          ; Write character to video memory
     loop print_message_2
     pop es
@@ -506,9 +618,9 @@ loop loop_sleep
 mov cx, 0xFFFF
 loop_sleep2:
 loop loop_sleep2
-; mov cx, 0xFFFF
-; loop_sleep3:
-; loop loop_sleep3
+mov cx, 0xFFFF
+loop_sleep3:
+loop loop_sleep3
 popa
 ret
 
