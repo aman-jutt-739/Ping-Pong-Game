@@ -8,14 +8,14 @@ wall_top: db ' '
 ball: db ' '
 ball_position: db 0,0
 ball_position_change: db 0,0
-player_1_score: db 0      
-player_2_score: db 0      
+player_1_score: db 0      ; Score for Player 1
+player_2_score: db 0      ; Score for Player 2
 footer_text: db '23F-0605, 23F-0707, 23F-0849', 0
 footer_length: dw 28
-winner_message_1: db 'Player 1 Wins!', 0
-winner_length_1: dw 14
-winner_message_2: db 'Player 2 Wins!', 0
-winner_length_2: dw 14
+winner_message_1: db 'Player 1 Wins!            ', 0
+winner_length_1: dw 20
+winner_message_2: db 'Player 2 Wins!            ', 0
+winner_length_2: dw 20
 
 initialize:
 pusha
@@ -39,37 +39,45 @@ popa
 ret
 
 draw:
-call delay
-call clrscr
-call draw_scores 
-call print_ball
-call print_paddle_1
-call print_paddle_2
-call print_footer         
-ret
+    call delay
+    call clrscr
+    call draw_scores          ; Draw the scores at the top corners
+    call print_ball
+    call print_paddle_1
+    call print_paddle_2
+    call print_footer         ; Add footer text
+    ret
 
 logic:
-call check_winner 
-call check_reflection
-call move_ball
-call check_for_char
-jz skip
-call move_paddle
+    call check_winner              ; Check if a player has won
+    call check_reflection
+    call move_ball
+    call check_for_char
+    jz skip
+    call move_paddle
 skip:
-ret
+    ret
 
 print_footer:
-pusha
-mov ah, 0x13
-mov al, 1
-mov bh, 0
-mov bl, 7
-mov dx, 0x1901
-mov bp, footer_text
-mov cx, [footer_length]
-int 0x10
-popa
-ret
+    pusha
+    push es
+    mov ax, 0xB800          ; Set ES to video memory segment
+    mov es, ax
+    mov di, 3840            ; Start of the last line (row 25)
+    
+    ; String "23F-0605, 23F-0707, 23F-0849"
+    mov si, footer_text
+    mov cx, [footer_length]
+    
+print_footer_loop:
+    lodsb                   ; Load a byte from DS:SI
+    mov ah, 0x07            ; Attribute byte (white text)
+    stosw                   ; Write character to video memory
+    loop print_footer_loop  ; Repeat for all characters
+
+    pop es
+    popa
+    ret
 
 move_ball:
 pusha
@@ -138,23 +146,25 @@ jne return4
 jmp reset
 
 reset:
-cmp byte [ball_position+1], 1
-jle player_2_point
-cmp byte [ball_position+1], 79    
-jae player_1_point
-jmp reset_ball
+    ; Check which side the ball went out on
+    cmp byte [ball_position+1], 1      ; Left side
+    jle player_2_point
+    cmp byte [ball_position+1], 79     ; Right side
+    jae player_1_point
+    jmp reset_ball
 
 player_1_point:
-inc byte [player_1_score]
-jmp reset_ball
+    inc byte [player_1_score]          ; Increment Player 1's score
+    jmp reset_ball
 
 player_2_point:
-inc byte [player_2_score]
+    inc byte [player_2_score]          ; Increment Player 2's score
+    jmp reset_ball
 
 reset_ball:
-mov byte [ball_position], 12   
-mov byte [ball_position+1], 40
-jmp return3
+    mov byte [ball_position], 12       ; Reset ball to center row
+    mov byte [ball_position+1], 40     ; Reset ball to center column
+    jmp return3
 
 return4:
 jmp return3
@@ -196,26 +206,28 @@ popa
 ret
 
 draw_scores:
-pusha
-push es
-mov ax, 0xB800  
-mov es, ax
+    pusha
+    push es
+    mov ax, 0xB800          ; Set ES to video memory segment
+    mov es, ax
 
-mov di, 0     
-mov al, [player_1_score]
-add al, '0'   
-mov ah, 0x07  
-stosw 
+    ; Draw Player 1 (left) score
+    mov di, 0               ; Top-left corner
+    mov al, [player_1_score]
+    add al, '0'             ; Convert numeric value to ASCII
+    mov ah, 0x07            ; Attribute byte (white text)
+    stosw                   ; Write the score to video memory
 
-mov di, 158          
-mov al, [player_2_score]
-add al, '0'          
-mov ah, 0x07         
-stosw 
+    ; Draw Player 2 (right) score
+    mov di, 158             ; Top-right corner (80 * 2 - 2 = 158)
+    mov al, [player_2_score]
+    add al, '0'             ; Convert numeric value to ASCII
+    mov ah, 0x07            ; Attribute byte (white text)
+    stosw                   ; Write the score to video memory
 
-pop es
-popa
-ret
+    pop es
+    popa
+    ret
 
 move_paddle:
 cmp ah , 0x11
@@ -407,47 +419,55 @@ popa
 ret
 
 check_winner:
-pusha
-cmp byte [player_1_score], 5 
-jne check_player_2
-call display_winner_message_1
-jmp game_over
+    pusha
+    cmp byte [player_1_score], 5    ; Check if Player 1 has 5 points
+    jne check_player_2
+    call display_winner_message_1
+    jmp game_over
 
 check_player_2:
-cmp byte [player_2_score], 5
-jne return_winner_check
-call display_winner_message_2
-jmp game_over
+    cmp byte [player_2_score], 5    ; Check if Player 2 has 5 points
+    jne return_winner_check
+    call display_winner_message_2
+    jmp game_over
 
 return_winner_check:
-popa
-ret
+    popa
+    ret
 
 display_winner_message_1:
-pusha
-mov ah, 0x13
-mov al, 1
-mov bh, 0
-mov bl, 7
-mov dx, 0x0C14
-mov bp, winner_message_1
-mov cx, [winner_length_1]
-int 0x10
-popa
-ret
+    pusha
+    push es
+    mov ax, 0xB800                 ; Set ES to video memory segment
+    mov es, ax
+    mov di, 160 * 12               ; Center row of the screen
+    mov si, winner_message_1
+    mov cx, [winner_length_1]
+print_message_1:
+    lodsb                          ; Load a byte from DS:SI
+    mov ah, 0x07                   ; Attribute byte (white text)
+    stosw                          ; Write character to video memory
+    loop print_message_1
+    pop es
+    popa
+    ret
 
 display_winner_message_2:
-pusha
-mov ah, 0x13
-mov al, 1
-mov bh, 0
-mov bl, 7
-mov dx, 0x0C14
-mov bp, winner_message_2
-mov cx, [winner_length_2]
-int 0x10
-popa
-ret
+    pusha
+    push es
+    mov ax, 0xB800                 ; Set ES to video memory segment
+    mov es, ax
+    mov di, 160 * 12               ; Center row of the screen
+    mov si, winner_message_2
+    mov cx, [winner_length_2]
+print_message_2:
+    lodsb                          ; Load a byte from DS:SI
+    mov ah, 0x07                   ; Attribute byte (white text)
+    stosw                          ; Write character to video memory
+    loop print_message_2
+    pop es
+    popa
+    ret
 
 game_over:
 popa
@@ -476,4 +496,4 @@ call draw
 call logic
 jmp infinite_loop
 mov ax, 0x4c00
-int 0x21
+int 0x21 
