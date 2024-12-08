@@ -8,6 +8,15 @@ wall_top: db ' '
 ball: db ' '
 ball_position: db 0,0
 ball_position_change: db 0,0
+player_1_score: db 0      
+player_2_score: db 0      
+footer_text: db '23F-0605, 23F-0707, 23F-0849', 0
+footer_length: dw 28
+winner_message_1: db 'Player 1 Wins!', 0
+winner_length_1: dw 14
+winner_message_2: db 'Player 2 Wins!', 0
+winner_length_2: dw 14
+
 initialize:
 pusha
 call initial_clr
@@ -18,33 +27,48 @@ mov al, 0x0C
 mov [ball_position], al
 mov al, 0x28
 mov [ball_position+1], al
-mov al, 0x0D
+mov al, 0x0B
 mov [paddle_1_pos], al
-mov al, 0x15 
+mov al, 0x2 
 mov [paddle_1_pos+1], al
-mov al, 0x0D
+mov al, 0x0B
 mov [paddle_2_pos], al
-mov al, 0x3D
+mov al, 0x4D
 mov [paddle_2_pos+1], al
 popa
 ret
-draw:
 
+draw:
 call delay
 call clrscr
+call draw_scores 
 call print_ball
 call print_paddle_1
 call print_paddle_2
-
-
+call print_footer         
 ret
+
 logic:
+call check_winner 
 call check_reflection
 call move_ball
 call check_for_char
 jz skip
 call move_paddle
 skip:
+ret
+
+print_footer:
+pusha
+mov ah, 0x13
+mov al, 1
+mov bh, 0
+mov bl, 7
+mov dx, 0x1901
+mov bp, footer_text
+mov cx, [footer_length]
+int 0x10
+popa
 ret
 
 move_ball:
@@ -110,12 +134,29 @@ jmp reset
 
 no_left_wall:
 cmp al, 79
-jne return3
+jne return4
 jmp reset
 
 reset:
-mov byte[ball_position], 12
-mov byte[ball_position+1], 40
+cmp byte [ball_position+1], 1
+jle player_2_point
+cmp byte [ball_position+1], 79    
+jae player_1_point
+jmp reset_ball
+
+player_1_point:
+inc byte [player_1_score]
+jmp reset_ball
+
+player_2_point:
+inc byte [player_2_score]
+
+reset_ball:
+mov byte [ball_position], 12   
+mov byte [ball_position+1], 40
+jmp return3
+
+return4:
 jmp return3
 
 left_collision:
@@ -151,6 +192,28 @@ mov byte[ball_position_change],1
 mov byte[ball_position_change+1],1
 jmp return3
 return3:
+popa
+ret
+
+draw_scores:
+pusha
+push es
+mov ax, 0xB800  
+mov es, ax
+
+mov di, 0     
+mov al, [player_1_score]
+add al, '0'   
+mov ah, 0x07  
+stosw 
+
+mov di, 158          
+mov al, [player_2_score]
+add al, '0'          
+mov ah, 0x07         
+stosw 
+
+pop es
 popa
 ret
 
@@ -196,11 +259,11 @@ return:
 mov ah, 0
 int 0x16
 ret
+
 check_for_char:
 mov ah, 01
 int 0x16
 ret
-
 
 initial_clr:
 pusha
@@ -342,6 +405,55 @@ add bx,1
 loop loop_print2
 popa
 ret
+
+check_winner:
+pusha
+cmp byte [player_1_score], 5 
+jne check_player_2
+call display_winner_message_1
+jmp game_over
+
+check_player_2:
+cmp byte [player_2_score], 5
+jne return_winner_check
+call display_winner_message_2
+jmp game_over
+
+return_winner_check:
+popa
+ret
+
+display_winner_message_1:
+pusha
+mov ah, 0x13
+mov al, 1
+mov bh, 0
+mov bl, 7
+mov dx, 0x0C14
+mov bp, winner_message_1
+mov cx, [winner_length_1]
+int 0x10
+popa
+ret
+
+display_winner_message_2:
+pusha
+mov ah, 0x13
+mov al, 1
+mov bh, 0
+mov bl, 7
+mov dx, 0x0C14
+mov bp, winner_message_2
+mov cx, [winner_length_2]
+int 0x10
+popa
+ret
+
+game_over:
+popa
+add sp, 2
+mov ax, 0x4c00
+int 0x21
 
 delay:
 pusha
