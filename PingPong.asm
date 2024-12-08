@@ -1,13 +1,14 @@
 [org 0x0100]
-jmp start
-paddle_1: db '   '
-paddle_2: db '   '
-paddle_1_pos: db 0,0
-paddle_2_pos: db 0,0
-wall_top: db ' '
-ball: db ' '
-ball_position: db 0,0
-ball_position_change: db 0,0
+
+jmp start ; move to starting point
+
+paddle_1: db '   ' ; represented like an array of
+paddle_2: db '   ' ; represented like an array of
+paddle_1_pos: db 0,0 ; rows and cols
+paddle_2_pos: db 0,0; rows and cols
+ball: db ' ' ; Empty space as ball
+ball_position: db 0,0 ; rows and cols
+ball_position_change: db 0,0; rows and cols
 player_1_score: db 0      ; Score for Player 1
 player_2_score: db 0      ; Score for Player 2
 footer_text: db 'Aman: 23F-0605, Ahmad: 23F-0707, Farquleet: 23F-0849', 0
@@ -16,43 +17,50 @@ winner_message_1: db 'Player 1 Wins!', 0
 winner_length_1: dw 14
 winner_message_2: db 'Player 2 Wins!', 0
 winner_length_2: dw 14
+show_patterns: db 0
 
-initialize:
-pusha
-call initial_clr
-call print_wall
-mov byte[ball_position_change], 1
-mov byte[ball_position_change+1], 1
-mov al, 0x0C
-mov [ball_position], al
-mov al, 0x28
-mov [ball_position+1], al
-mov al, 0x0B
-mov [paddle_1_pos], al
-mov al, 0x2 
-mov [paddle_1_pos+1], al
-mov al, 0x0B
-mov [paddle_2_pos], a
-mov al, 0x4D
-mov [paddle_2_pos+1], al
-popa
-ret
+initialize: ; will run only when the program starts
+    pusha ; save all registers
+    call initial_clr ; clear full screen
+    call print_wall ; make wall on border
+    ; assigning initial values to global variables
+    mov byte[show_patterns], 1
+    mov byte[ball_position_change], 1
+    mov byte[ball_position_change+1], 1
+    mov al, 0x0C
+    mov [ball_position], al
+    mov al, 0x28
+    mov [ball_position+1], al
+    mov al, 0x0B
+    mov [paddle_1_pos], al
+    mov al, 0x2 
+    mov [paddle_1_pos+1], al
+    mov al, 0x0B
+    mov [paddle_2_pos], al
+    mov al, 0x4D
+    mov [paddle_2_pos+1], al
+    popa
+    ret
 
 draw:
-    call delay
-    call clrscr
+    call delay ; using it for slowing down the process
+    call clrscr ; clear screen except the border
+    cmp byte[show_patterns], 1 ; checking the toggle for patterns
+    jne skip_pattern
+    call pattern
+    skip_pattern:
     call draw_scores          ; Draw the scores at the top corners
-    call print_ball
-    call print_paddle_1
-    call print_paddle_2
+    call print_ball           ; Display Ball
+    call print_paddle_1       ; Print left paddle
+    call print_paddle_2       ; Print right paddle
     call print_footer         ; Add footer text
     ret
 
 logic:
     call check_winner              ; Check if a player has won
-    call check_reflection
-    call move_ball
-    call check_for_char
+    call check_reflection          ; Check ball reflection
+    call move_ball                 ; Changing direction of ball
+    call check_for_char            ; Checking keyStrokes
     jz skip
     call move_paddle
 skip:
@@ -80,130 +88,133 @@ print_footer_loop:
     ret
 
 move_ball:
-pusha
-mov al, [ball_position_change]
-add [ball_position], al
-mov al, [ball_position_change+1]
-add [ball_position+1], al
-popa
-ret
+    pusha
+    ; moving ball according to its direction
+    mov al, [ball_position_change]
+    add [ball_position], al
+    mov al, [ball_position_change+1]
+    add [ball_position+1], al
+    popa
+    ret
 
 check_reflection:
-pusha
-mov ah, [ball_position]
-mov al, [ball_position+1]
-add ah, [ball_position_change]
-add al, [ball_position_change+1]
-mov dl, [paddle_1_pos+1]
-add dl, 1
-cmp al, dl
-jne no_left
-mov dh, [paddle_1_pos]
-sub dh, 1
-cmp dh, ah
-je left_collision
-add dh, 1
-cmp dh, ah
-je left_collision
-add dh, 1
-cmp dh, ah
-je left_collision
+    pusha
+    mov ah, [ball_position]
+    mov al, [ball_position+1]
+    add ah, [ball_position_change]
+    add al, [ball_position_change+1]
+    ; checking for left paddle
+    mov dl, [paddle_1_pos+1]
+    add dl, 1
+    cmp al, dl
+    jne no_left
+    mov dh, [paddle_1_pos]
+    sub dh, 1
+    cmp dh, ah
+    je left_collision
+    add dh, 1
+    cmp dh, ah
+    je left_collision
+    add dh, 1
+    cmp dh, ah
+    je left_collision
 
-no_left:
-mov dl, [paddle_2_pos+1]
-sub dl, 1
-cmp al, dl
-jne no_right
-mov dh, [paddle_2_pos]
-sub dh, 1
-cmp dh, ah
-je right_collision
-add dh, 1
-cmp dh, ah
-je right_collision
-add dh, 1
-cmp dh, ah
-je right_collision
+  ; checking for right paddle
+    no_left:
+        mov dl, [paddle_2_pos+1]
+        sub dl, 1
+        cmp al, dl
+        jne no_right
+        mov dh, [paddle_2_pos]
+        sub dh, 1
+        cmp dh, ah
+        je right_collision
+        add dh, 1
+        cmp dh, ah
+        je right_collision
+        add dh, 1
+        cmp dh, ah
+        je right_collision
+; checking for upper wall
+    no_right:
+        cmp ah, 1
+        jne no_up
+        jmp up_collision 
+; checking for lower wall
+    no_up:
+        cmp ah, 24
+        jne no_down
+        jmp down_collision
+; checkign for left wall
+    no_down:
+        cmp al, 1
+        jne no_left_wall
+        jmp reset
+; checking for right wall
+    no_left_wall:
+        cmp al, 79
+        jne return4
+        jmp reset
 
-no_right:
-cmp ah, 1
-jne no_up
-jmp up_collision 
+    reset:
+        ; Check which side the ball went out on
+        cmp byte [ball_position+1], 2      ; Left side
+        jle player_2_point
+        cmp byte [ball_position+1], 78     ; Right side
+        jae player_1_point
+        jmp reset_ball
 
-no_up:
-cmp ah, 24
-jne no_down
-jmp down_collision
+    player_1_point:
+        inc byte [player_1_score]          ; Increment Player 1's score
+        jmp reset_ball
 
-no_down:
-cmp al, 1
-jne no_left_wall
-jmp reset
+    player_2_point:
+        inc byte [player_2_score]          ; Increment Player 2's score
+        jmp reset_ball
 
-no_left_wall:
-cmp al, 79
-jne return4
-jmp reset
+    reset_ball:
+        mov byte [ball_position], 12       ; Reset ball to center row
+        mov byte [ball_position+1], 40     ; Reset ball to center column
+        jmp return3
 
-reset:
-    ; Check which side the ball went out on
-    cmp byte [ball_position+1], 2      ; Left side
-    jle player_2_point
-    cmp byte [ball_position+1], 78     ; Right side
-    jae player_1_point
-    jmp reset_ball
+    return4:
+        jmp return3
 
-player_1_point:
-    inc byte [player_1_score]          ; Increment Player 1's score
-    jmp reset_ball
-
-player_2_point:
-    inc byte [player_2_score]          ; Increment Player 2's score
-    jmp reset_ball
-
-reset_ball:
-    mov byte [ball_position], 12       ; Reset ball to center row
-    mov byte [ball_position+1], 40     ; Reset ball to center column
-    jmp return3
-
-return4:
-jmp return3
-
-left_collision:
-cmp byte[ball_position_change],1
-je left_diagonal_down
-jmp right_diagonal_up
-right_collision:
-cmp byte[ball_position_change],1
-je right_diagonal_down
-jmp left_diagonal_up
-up_collision:   
-cmp byte[ball_position_change+1],1
-je left_diagonal_down
-jmp right_diagonal_down
-down_collision:
-cmp byte[ball_position_change+1],1
-je right_diagonal_up
-jmp left_diagonal_up
-right_diagonal_up:
-mov byte[ball_position_change],-1
-mov byte[ball_position_change+1],1
-jmp return3
-right_diagonal_down:
-mov byte[ball_position_change],1
-mov byte[ball_position_change+1],-1
-jmp return3
-left_diagonal_up:
-mov byte[ball_position_change],-1
-mov byte[ball_position_change+1],-1
-jmp return3
-left_diagonal_down:
-mov byte[ball_position_change],1
-mov byte[ball_position_change+1],1
-jmp return3
-return3:
-popa
-ret
+    left_collision:
+        cmp byte[ball_position_change],1
+        je left_diagonal_down
+        jmp right_diagonal_up
+    right_collision:
+        cmp byte[ball_position_change],1
+        je right_diagonal_down
+        jmp left_diagonal_up
+    up_collision:   
+        cmp byte[ball_position_change+1],1
+        je left_diagonal_down
+        jmp right_diagonal_down
+    down_collision:
+        cmp byte[ball_position_change+1],1
+        je right_diagonal_up
+        jmp left_diagonal_up
+    right_diagonal_up:
+        mov byte[ball_position_change],-1
+        mov byte[ball_position_change+1],1
+        jmp return3
+    right_diagonal_down:
+        mov byte[ball_position_change],1
+        mov byte[ball_position_change+1],-1
+        jmp return3
+    left_diagonal_up:
+        mov byte[ball_position_change],-1
+        mov byte[ball_position_change+1],-1
+        jmp return3
+    left_diagonal_down:
+        mov byte[ball_position_change],1
+        mov byte[ball_position_change+1],1
+        jmp return3
+    return3:
+        popa
+        ret
 
 draw_scores:
     pusha
@@ -232,209 +243,248 @@ draw_scores:
 
 pause_play:
 
-pause_game:
-call check_for_char
-jz pause_game
-mov ah, 0
-int 0x16
-cmp al, 'p'
-jne pause_game
-return_pause:
-ret
+    pause_game:
+        call check_for_char
+        jz pause_game
+        mov ah, 0
+        int 0x16
+        cmp al, 'p'
+        jne pause_game
+    return_pause:
+        ret
 
 move_paddle:
-mov ah, 0
-int 0x16
-cmp ah , 0x11
-je mov_paddle_1_up
-cmp ah , 0x1F
-je mov_paddle_1_down
-cmp ah , 0x48
-je mov_paddle_2_up
-cmp ah , 0x50
-je mov_paddle_2_down
-cmp al, 'p'
-je pause_label
-jmp return
-mov_paddle_1_up:
-mov dl, [paddle_1_pos]
-sub dl, 1
-cmp dl, 1
-je return
-sub byte[paddle_1_pos],1
-jmp return
-mov_paddle_1_down:
-mov dl, [paddle_1_pos]
-add dl, 2
-cmp dl, 24
-je return
-add byte[paddle_1_pos],1
-jmp return
-mov_paddle_2_up:
-mov dl, [paddle_2_pos]
-sub dl, 1
-cmp dl, 1
-je return
-sub byte[paddle_2_pos],1
-jmp return
-mov_paddle_2_down:
-mov dl, [paddle_2_pos]
-add dl, 2
-cmp dl, 24
-je return
-add byte[paddle_2_pos],1
-jmp return
-pause_label:
-call pause_play
-jmp return
-return:
-ret
+    mov ah, 0
+    int 0x16
+    cmp ah , 0x11
+    je mov_paddle_1_up
+    cmp ah , 0x1F
+    je mov_paddle_1_down
+    cmp ah , 0x48
+    je mov_paddle_2_up
+    cmp ah , 0x50
+    je mov_paddle_2_down
+    cmp al, 'p'
+    je pause_label
+    cmp al, 't'
+    je toggle_pattern
+    jmp return
+    mov_paddle_1_up:
+        mov dl, [paddle_1_pos]
+        sub dl, 1
+        cmp dl, 1
+        je return
+        sub byte[paddle_1_pos],1
+        jmp return
+    mov_paddle_1_down:
+        mov dl, [paddle_1_pos]
+        add dl, 2
+        cmp dl, 24
+        je return
+        add byte[paddle_1_pos],1
+        jmp return
+    mov_paddle_2_up:
+        mov dl, [paddle_2_pos]
+        sub dl, 1
+        cmp dl, 1
+        je return
+        sub byte[paddle_2_pos],1
+        jmp return
+    mov_paddle_2_down:
+        mov dl, [paddle_2_pos]
+        add dl, 2
+        cmp dl, 24
+        je return
+        add byte[paddle_2_pos],1
+        jmp return
+    pause_label:
+        call pause_play
+        jmp return
+    toggle_pattern:
+        cmp byte[show_patterns], 1
+        jne skip_toggle
+        mov byte[show_patterns], 0
+        jmp return
+    skip_toggle:
+        mov byte[show_patterns], 1
+        jmp return
+    return:
+        ret
 
 check_for_char:
-mov ah, 01
-int 0x16
-ret
+    mov ah, 01
+    int 0x16
+    ret
 
 initial_clr:
-pusha
-push es
-mov ax, 0xb800
-mov es, ax ; point es to video base
-mov ax, 0x0720 ; space char in normal attribute
-mov cx, 2000 ; number of screen locations
-cld ; auto increment mode
-rep stosw ; clear the whole screen
-pop es
-popa
-ret
+    pusha
+    push es
+    mov ax, 0xb800
+    mov es, ax ; point es to video base
+    mov ax, 0x0720 ; space char in normal attribute
+    mov cx, 2000 ; number of screen locations
+    cld ; auto increment mode
+    rep stosw ; clear the whole screen
+    pop es
+    popa
+    ret
 
 clrscr:
-pusha
-push es
-mov ax, 0xb800
-mov es, ax ; point es to video base
-; mov ax, 0x0720 ; space char in normal attribute
-; mov cx, 2000 ; number of screen locations
-; cld ; auto increment mode
-; rep stosw ; clear the whole screen
-mov si, 0
-mov bx, 160
-loop_clr:
-    mov di, 2
-    loop_clr_inner:
-    mov word[es:di+bx], 0x0720
-    add di, 2
-    cmp di, 158
-    jl loop_clr_inner
-add si, 1
-add bx, 160
-cmp si, 23
-jl loop_clr
-pop es
-popa
-ret
+    pusha
+    push es
+    mov ax, 0xb800
+    mov es, ax ; point es to video base
+    mov si, 0
+    mov bx, 160
+    loop_clr:
+        mov di, 2
+        loop_clr_inner:
+        mov word[es:di+bx], 0x0720
+        add di, 2
+        cmp di, 158
+        jl loop_clr_inner
+    add si, 1
+    add bx, 160
+    cmp si, 23
+    jl loop_clr
+    pop es
+    popa
+    ret
+
+pattern:
+    pusha
+    push es
+    mov ax, 0xb800
+    mov es, ax
+    mov si, 0
+    mov bx, 160
+    mov ah, 0x87
+    ; printing colorful dots
+    print_pattern:
+        mov di, 2
+        print_pattern_inner:
+        mov al, 0x2E
+        call change_color
+        mov word[es:di+bx], ax
+        add di, 2
+        cmp di, 158
+        jl print_pattern_inner
+    add si, 1
+    add bx, 160
+    cmp si, 23
+    jl print_pattern
+    pop es
+    popa
+    ret
+
+change_color:
+    cmp ah, 0x80
+    je change
+    sub ah, 1 
+    ret
+    change:
+    mov ah, 0x87
+    ret
+
 
 print_wall:
-pusha
-push es
-mov ax, 0xb800
-mov es, ax
-mov bx, 0
-outerloop_wall:
-mov di, 0
-loop_wall:
-cmp bx, 0
-je print
-cmp bx, 3840
-je print
-cmp di, 0
-je print
-cmp di, 158
-je print
-jmp return2
-print:
-mov word[es:di + bx], 0xC720
-jmp return2
-return2:
-add di, 2
-cmp di, 160
-jl loop_wall
-add bx, 160
-cmp bx, 4000
-jl outerloop_wall
-pop es
-popa
-ret
+    pusha
+    push es
+    mov ax, 0xb800
+    mov es, ax
+    mov bx, 0
+    outerloop_wall:
+        mov di, 0
+        loop_wall:
+            cmp bx, 0
+            je print
+            cmp bx, 3840
+            je print
+            cmp di, 0
+            je print
+            cmp di, 158
+            je print
+            jmp return2
+        print:
+            mov word[es:di + bx], 0xC720
+            jmp return2
+        return2:
+            add di, 2
+            cmp di, 160
+            jl loop_wall
+            add bx, 160
+            cmp bx, 4000
+            jl outerloop_wall
+    pop es
+    popa
+    ret
 
 print_ball:
-pusha
-mov dh, [ball_position]
-mov dl, [ball_position+1]
-mov bp, paddle_1
-add bp, bx
-mov ah, 0x13 ; service 13 - print string
-mov al, 1 ; subservice 01 – update cursor
-mov bh, 0 ; output on page 0
-; mov bl, 7 ; normal attrib
-mov bx, 0xF0
-mov cx, 1 ; length of string
-push cs
-pop es ; segment of string
-int 0x10
-popa
-ret
+    pusha
+    mov dh, [ball_position]
+    mov dl, [ball_position+1]
+    mov bp, paddle_1
+    add bp, bx
+    mov ah, 0x13 ; service 13 - print string
+    mov al, 1 ; subservice 01 – update cursor
+    mov bh, 0 ; output on page 0
+    mov bx, 0xF0
+    mov cx, 1 ; length of string
+    push cs
+    pop es ; segment of string
+    int 0x10
+    popa
+    ret
 
 print_paddle_1:
-pusha
-mov cx, 3
-mov bx, 0
-loop_print:
-pusha
-mov dh, [paddle_1_pos]
-mov dl, [paddle_1_pos+1]
-sub dh, 1
-add dh, bl
-mov bp, paddle_1
-add bp, bx
-mov ah, 0x13 ; service 13 - print string
-mov al, 1 ; subservice 01 – update cursor
-; mov bh, 0 ; output on page 0
-; mov bl, 7 ; normal attrib
-mov bx, 0x97
-mov cx, 1 ; length of string
-push cs
-pop es ; segment of string
-int 0x10
-popa
-add bx,1
-loop loop_print
-popa
-ret
+    pusha
+    mov cx, 3
+    mov bx, 0
+    loop_print:
+    pusha
+    mov dh, [paddle_1_pos]
+    mov dl, [paddle_1_pos+1]
+    sub dh, 1
+    add dh, bl
+    mov bp, paddle_1
+    add bp, bx
+    mov ah, 0x13 ; service 13 - print string
+    mov al, 1 ; subservice 01 – update cursor
+    mov bx, 0x97
+    mov cx, 1 ; length of string
+    push cs
+    pop es ; segment of string
+    int 0x10
+    popa
+    add bx,1
+    loop loop_print
+    popa
+    ret
 
 print_paddle_2:
-pusha
-mov cx, 3
-mov bx, 0
-loop_print2:
-pusha
-mov dh, [paddle_2_pos]
-mov dl, [paddle_2_pos+1]
-sub dh, 1
-add dh, bl
-mov bp, paddle_2
-add bp, bx
-mov ah, 0x13 ; service 13 - print string
-mov al, 1 ; subservice 01 – update cursor
-mov bx, 0xA7
-mov cx, 1 ; length of string
-push cs
-pop es ; segment of string
-int 0x10
-popa
-add bx,1
-loop loop_print2
-popa
-ret
+    pusha
+    mov cx, 3
+    mov bx, 0
+    loop_print2:
+    pusha
+    mov dh, [paddle_2_pos]
+    mov dl, [paddle_2_pos+1]
+    sub dh, 1
+    add dh, bl
+    mov bp, paddle_2
+    add bp, bx
+    mov ah, 0x13 ; service 13 - print string
+    mov al, 1 ; subservice 01 – update cursor
+    mov bx, 0xA7
+    mov cx, 1 ; length of string
+    push cs
+    pop es ; segment of string
+    int 0x10
+    popa
+    add bx,1
+    loop loop_print2
+    popa
+    ret
 
 check_winner:
     pusha
@@ -488,30 +538,30 @@ print_message_2:
     ret
 
 game_over:
-popa
-add sp, 2
-mov ax, 0x4c00
-int 0x21
+    popa
+    add sp, 2
+    mov ax, 0x4c00
+    int 0x21
 
 delay:
-pusha
-mov cx, 0xFFFF
-loop_sleep:
-loop loop_sleep
-mov cx, 0xFFFF
-loop_sleep2:
-loop loop_sleep2
-mov cx, 0xFFFF
-loop_sleep3:
-loop loop_sleep3
-popa
-ret
+    pusha
+    mov cx, 0xFFFF
+    loop_sleep:
+    loop loop_sleep
+    mov cx, 0xFFFF
+    loop_sleep2:
+    loop loop_sleep2
+    mov cx, 0xFFFF
+    loop_sleep3:
+    loop loop_sleep3
+    popa
+    ret
 
 start:
-call initialize
-infinite_loop:
-call draw
-call logic
-jmp infinite_loop
-mov ax, 0x4c00
-int 0x21 
+    call initialize
+    infinite_loop:
+        call draw
+        call logic
+        jmp infinite_loop
+    mov ax, 0x4c00
+    int 0x21 
