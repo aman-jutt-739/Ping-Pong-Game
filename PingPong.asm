@@ -17,117 +17,6 @@ winner_length_1: dw 14
 winner_message_2: db 'Player 2 Wins!', 0
 winner_length_2: dw 14
 
-print_square:
-push bp
-mov bp, sp
-push ax
-push bx
-push cx
-mov ax, 0x072A
-mov cx, [bp + 4]
-outer:
-mov bx, 0
-cmp cx, 0
-jz exit
-mov dx, [bp + 4]
-inner:
-cmp dx, 0
-jz decrement
-cmp cx, [bp + 4]
-jz print_sterik
-cmp cx, 1
-jz print_sterik
-cmp dx, [bp + 4]
-jz print_sterik
-cmp dx, 1
-jz print_sterik
-print_spaces:
-mov word[es:di], 0x0720
-add di, 4
-add bx, 4
-dec dx
-jmp inner
-print_sterik:
-mov [es:di], ax
-add bx, 4
-add di, 4
-dec dx
-jmp inner
-decrement:
-add di, 160
-sub di, bx
-sub cx, 1
-jmp outer
-exit:
-pop cx
-pop bx
-pop ax
-pop bp
-ret 2
-
-print_smile:
-push di
-mov di, 1496
-mov word[es:di], 0x072A
-mov di, 1656
-mov word[es:di], 0x072A
-mov di, 1816
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-add di, 4
-mov word[es:di], 0x072A
-sub di, 160
-mov word[es:di], 0x072A
-sub di, 160
-mov word[es:di], 0x072A
-pop di
-ret
-
-print_smiley:
-push ax
-push bx
-push cx
-push dx
-push di
-push es
-mov ax, 0xb800
-mov es, ax
-mov di, 206
-mov ax, 15
-push ax
-call print_square
-mov ax, 3
-push ax
-mov di, 534
-call print_square
-mov ax, 3
-push ax
-mov di, 568
-call print_square
-call print_smile
-pop es
-pop di
-pop dx
-pop cx
-pop bx
-pop ax
-ret
-
 initialize:
 pusha
 call initial_clr
@@ -143,7 +32,7 @@ mov [paddle_1_pos], al
 mov al, 0x2 
 mov [paddle_1_pos+1], al
 mov al, 0x0B
-mov [paddle_2_pos], al
+mov [paddle_2_pos], a
 mov al, 0x4D
 mov [paddle_2_pos+1], al
 popa
@@ -151,7 +40,6 @@ ret
 
 draw:
     call delay
-    call print_smiley
     call clrscr
     call draw_scores          ; Draw the scores at the top corners
     call print_ball
@@ -168,11 +56,6 @@ logic:
     jz skip
     call move_paddle
 skip:
-;     call delay
-;     call check_for_char
-;     jz skip2
-;     call pause_play
-; skip2:
     ret
 
 print_footer:
