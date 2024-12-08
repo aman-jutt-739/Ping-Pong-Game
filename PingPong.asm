@@ -10,8 +10,8 @@ ball_position: db 0,0
 ball_position_change: db 0,0
 player_1_score: db 0      ; Score for Player 1
 player_2_score: db 0      ; Score for Player 2
-footer_text: db '23F-0605, 23F-0707, 23F-0849', 0
-footer_length: dw 28
+footer_text: db 'Aman: 23F-0605, Ahmad: 23F-0707, Farquleet: 23F-0849', 0
+footer_length: dw 52
 winner_message_1: db 'Player 1 Wins!', 0
 winner_length_1: dw 14
 winner_message_2: db 'Player 2 Wins!', 0
