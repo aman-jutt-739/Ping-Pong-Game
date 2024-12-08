@@ -56,6 +56,11 @@ logic:
     jz skip
     call move_paddle
 skip:
+    call delay
+    call check_for_char
+    jz skip2
+    call pause_play
+skip2:
     ret
 
 print_footer:
@@ -147,9 +152,9 @@ jmp reset
 
 reset:
     ; Check which side the ball went out on
-    cmp byte [ball_position+1], 1      ; Left side
+    cmp byte [ball_position+1], 2      ; Left side
     jle player_2_point
-    cmp byte [ball_position+1], 79     ; Right side
+    cmp byte [ball_position+1], 78     ; Right side
     jae player_1_point
     jmp reset_ball
 
@@ -228,6 +233,24 @@ draw_scores:
     pop es
     popa
     ret
+
+
+pause_play:
+pusha
+mov ah, 0
+int 0x16
+cmp al, 'p'
+jne return_pause
+pause_game:
+call check_for_char
+jz pause_game
+mov ah, 0
+int 0x16
+cmp al, 'p'
+jne pause_game
+return_pause:
+popa
+ret
 
 move_paddle:
 cmp ah , 0x11
@@ -480,12 +503,12 @@ pusha
 mov cx, 0xFFFF
 loop_sleep:
 loop loop_sleep
-mov cx, 0xFFFF
+mov cx, 0x1FFF
 loop_sleep2:
 loop loop_sleep2
-mov cx, 0xFFFF
-loop_sleep3:
-loop loop_sleep3
+; mov cx, 0xFFFF
+; loop_sleep3:
+; loop loop_sleep3
 popa
 ret
 
