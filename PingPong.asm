@@ -56,11 +56,11 @@ logic:
     jz skip
     call move_paddle
 skip:
-    call delay
-    call check_for_char
-    jz skip2
-    call pause_play
-skip2:
+;     call delay
+;     call check_for_char
+;     jz skip2
+;     call pause_play
+; skip2:
     ret
 
 print_footer:
@@ -236,11 +236,7 @@ draw_scores:
 
 
 pause_play:
-pusha
-mov ah, 0
-int 0x16
-cmp al, 'p'
-jne return_pause
+
 pause_game:
 call check_for_char
 jz pause_game
@@ -249,10 +245,11 @@ int 0x16
 cmp al, 'p'
 jne pause_game
 return_pause:
-popa
 ret
 
 move_paddle:
+mov ah, 0
+int 0x16
 cmp ah , 0x11
 je mov_paddle_1_up
 cmp ah , 0x1F
@@ -261,6 +258,8 @@ cmp ah , 0x48
 je mov_paddle_2_up
 cmp ah , 0x50
 je mov_paddle_2_down
+cmp al, 'p'
+je pause_label
 jmp return
 mov_paddle_1_up:
 mov dl, [paddle_1_pos]
@@ -290,9 +289,10 @@ cmp dl, 24
 je return
 add byte[paddle_2_pos],1
 jmp return
+pause_label:
+call pause_play
+jmp return
 return:
-mov ah, 0
-int 0x16
 ret
 
 check_for_char:
@@ -503,7 +503,7 @@ pusha
 mov cx, 0xFFFF
 loop_sleep:
 loop loop_sleep
-mov cx, 0x1FFF
+mov cx, 0xFFFF
 loop_sleep2:
 loop loop_sleep2
 ; mov cx, 0xFFFF
