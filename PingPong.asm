@@ -147,9 +147,9 @@ jmp reset
 
 reset:
     ; Check which side the ball went out on
-    cmp byte [ball_position+1], 1      ; Left side
+    cmp byte [ball_position+1], 2      ; Left side
     jle player_2_point
-    cmp byte [ball_position+1], 79     ; Right side
+    cmp byte [ball_position+1], 78     ; Right side
     jae player_1_point
     jmp reset_ball
 
